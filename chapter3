@@ -1,0 +1,330 @@
+3 It Starts with a Tensor
+
+This chapter covers:
+	Tensors, the basic data structure in PyTorch
+	Indexing and operating on PyTorch tensors to explore and manipulate data
+	Interoperating with NumPy multidimensional arrays
+	Moving computations to the GPU for speed
+
+In the previous chapter we took a tour of some of the many applications deep learning enables. They invariably consisted in taking data in some form, like images or text, and producing data in another form, like labels, numbers, text, or more images. Taken from this angle, deep learning really consists of building a system that can transform data from one representation to another. This transformation is driven by extracting commonalities from a series of examples that demonstrate the desired mapping. For example, the system might note the general shape of a dog, and the typical colors of a golden retriever. By combining the two image properties, the system can correctly map images with a given shape and color to the golden retriever label, instead of a black lab (or a tawny tomcat, for that matter). The resulting system can consume broad swathes of similar inputs and produce meaningful output for those inputs.
+
+The process begins by converting our input into floating point numbers. We will cover converting image pixels to numbers, like we see in the first step of Figure-3.1, in chapter 4 (along with many other types of data). Since floating point numbers are the way a network deals with information, we need a way to encode real-world data of the kind we want to process into something digestible by a network and then decode the output back to something we can understand and use for a purpose.
+
+Before we can begin the process of converting our data to floating point input, we must first have a solid understanding of how PyTorch handles and stores data — as input, as intermediate representations, and as output. This chapter will be devoted to providing precisely to that.
+
+To this end, PyTorch introduces a fundamental data structure: the tensor. We have already bumped into tensors in Chapter 2, when we ran inference on pre-trained networks. For those who come from mathematics, physics or engineering, the term tensor comes bundled with the notion of spaces, reference systems and transformations between them. For better or worse, those notions do not apply here. In the context of deep learning, tensors refer to the generalization of vectors and matrices to an arbitrary number of dimensions, as we can see in Figure-3.2. Another name for the same concept is multidimensional arrays. The dimensionality of a tensor coincides with the number of indexes used to refer to scalar values within the tensor.
+
+Figure 3.1. A deep neural network learns how to transform an input representation to an output representation (Note: number of neurons and outputs not to scale).
+
+PyTorch is not the only library dealing with multidimensional arrays. NumPy is by far the most popular multidimensional array library, to the point that it has now arguably become the lingua franca of data science.
+
+In fact, PyTorch features seamless interoperability with NumPy, which brings with it first class integration with the rest of the scientific libraries in Python, such as SciPy[24], Scikit-learn[25], and Pandas[26].
+
+Figure 3.2. Tensors are the building blocks for representing data in PyTorch.
+p1ch3 tensors
+
+We’ll start this chapter by introducing PyTorch tensors, covering the basics in order to set things in motion for our work in the rest of the book. First and foremost, we’ll learn how to manipulate tensors using the PyTorch tensor library. This includes things like how the data is stored in memory, and how certain operations can be performed on arbitrarily large tensors in constant time, as well as the aforementioned NumPy interoperability and the GPU acceleration. Understanding the capabilities and API of tensors is important if they’re to become go-to tools in your programming toolbox; we’ll finish up the chapter with this. In the next chapter we’ll put this knowledge to good use and learn how to represent several different kinds of data in a way that enables learning with neural networks.
+
+3.1  Tensors are multi-dimensional arrays
+We have already learned that tensors are the fundamental data structure in PyTorch. A tensor is an array, that is, a data structure storing collection of numbers that are accessible individually using an index, and that can be indexed with multiple indices.
+
+3.1.1  From Python lists to PyTorch tensors
+3.1  Tensors are multi-dimensional arrays
+Listing 3.1. code/p1ch3/1_tensors.ipynb
+
+3.1.1  From Python lists to PyTorch tensors
+We can access the first element of the list using the corresponding 0-based index:
+
+Listing 3.1. code/p1ch3/1_tensors.ipynb
+
+# In[1]:
+a = [1.0, 2.0, 1.0]
+
+It is not unusual for simple Python programs dealing with vectors of numbers, such as the coordinates of a 2D line, to use Python lists to store the vector. As we will see in the following chapter, using the more efficient tensor data structure, many types of data, from images to time series, even sentences, can be represented. By defining operations over tensors, some of which we’ll explore in this chapter, we can slice and manipulate data expressively and efficiently at the same time, even from a high-level (and not particularly fast) language such as Python.
+
+# In[2]:
+a[0]
+
+# Out[2]:
+1.0
+
+# In[3]:
+a[2] = 3.0
+a
+
+# Out[3]:
+[1.0, 2.0, 3.0]
+
+Let’s construct our first PyTorch tensor and see what it looks like. It won’t be a particularly meaningful tensor for now, just three ones in a column.
+
+3.1.2  Constructing our first tensors
+
+Let’s see what we did here: after importing the torch module, we called a function that creates a (one-dimensional) tensor of size 3 filled with the value 1.0. We can access an element using its 0-based index or assign a new value to it.
+
+# In[4]:
+import torch
+a = torch.ones(3)
+a
+
+# Out[4]:
+tensor([1., 1., 1.])
+
+# In[5]:
+a[1]
+
+# Out[5]:
+tensor(1.)
+
+# In[6]:
+float(a[1])
+
+# Out[6]:
+1.0
+
+# In[7]:
+a[2] = 2.0
+a
+
+# Out[7]:
+tensor([1., 1., 2.])
+
+3.1.3  The essence of tensors
+
+Python lists or tuples of numbers are collections of Python objects that are individually allocated in memory, as shown on the left of Figure-3.3. PyTorch tensors or NumPy arrays on the other hand are views over (typically) contiguous memory blocks containing unboxed C numeric types rather than Python objects. Each element is a 32-bit (4 byte) float in this case, as we can see on the right side of Figure-3.3. This means that a 1D tensor of 1,000,000 float numbers will require exactly 4,000,000 contiguous bytes to be stored, plus a small overhead for the meta data (e.g. dimensions, numeric type).
+
+3.1.3  The essence of tensors
+
+Say we have a list of coordinates we’d like to manage to represent a geometrical object, perhaps a 2D triangle with vertices at coordinates (4, 1), (5, 3) and (2, 1). The example is not particularly pertinent to deep learning, but it’s easy to follow. Instead of having coordinates as numbers in a Python list, as we did above, we can use a one-dimensional tensor, by storing x’s in the even indices and y’s in the odd indices, like
+
+Figure 3.3. Python object (boxed) numeric values vs. tensor (unboxed array) numeric values.
+p1ch3 listsvstensors
+
+We can also pass a Python list to the constructor, to the same effect
+
+# In[8]:
+points = torch.zeros(6)
+points[0] = 4.0
+points[1] = 1.0
+points[2] = 5.0
+points[3] = 3.0
+points[4] = 2.0
+points[5] = 1.0
+
+To get the coordinates of the first point
+
+# In[9]:
+points = torch.tensor([4.0, 1.0, 5.0, 3.0, 2.0, 1.0])
+points
+
+# Out[9]:
+tensor([4., 1., 5., 3., 2., 1.])
+
+To get the coordinates of the first point
+
+# In[10]:
+float(points[0]), float(points[1])
+
+# Out[10]:
+(4.0, 1.0)
+
+Here we passed a list of lists to the constructor. We can ask the tensor about its shape:
+
+# In[11]:
+points = torch.tensor([[4.0, 1.0], [5.0, 3.0], [2.0, 1.0]])
+points
+
+# Out[11]:
+tensor([[4., 1.],
+        [5., 3.],
+        [2., 1.]])
+
+which informs us on the size of the tensor along each dimension. We could also have used zeros or ones to initialize the tensor, providing the size as a tuple:
+
+# In[12]:
+points.shape
+
+# Out[12]:
+torch.Size([3, 2])
+copy
+We can access an individual element in the tensor using two indices now, for instance
+
+# In[13]:
+points = torch.zeros(3, 2)
+points
+
+# Out[13]:
+tensor([[0., 0.],
+        [0., 0.],
+        [0., 0.]])
+
+returns the y-coordinate of the 0-th point in our dataset. We can also access the first element in the tensor as we did before to get the 2D coordinates of the first point:
+
+# In[14]:
+points = torch.tensor([[4.0, 1.0], [5.0, 3.0], [2.0, 1.0]])
+points
+
+# Out[14]:
+tensor([[4., 1.],
+        [5., 3.],
+        [2., 1.]])
+
+# In[15]:
+points[0, 1]
+
+# Out[15]:
+tensor(1.)
+
+The output is another tensor that presents a different view of the same underlying data. The new tensor is a 1D tensor of size 2 referencing the values of the first row in the points tensor. Does it mean that a new chunk of memory was allocated, values were copied into it, and the new memory returned wrapped in a new tensor object? No, because that would be very inefficient, especially if we had millions of points. We’ll revisit how tensors are stored later in this chapter when we cover views of tensors in “Tensors — scenic views on storage”.
+
+# In[16]:
+points[0]
+
+# Out[16]:
+tensor([4., 1.])
+
+[25] scikit-learn.org/stable/
+
+[24] www.scipy.org/
+
+[25] scikit-learn.org/stable/
+
+[26] pandas.pydata.org/
+
+3.2  Indexing Tensors
+
+To achieve our goal we can use the same notation for PyTorch tensors, with the added benefit that, just like in NumPy and in other Python scientific libraries, we can use range indexing for each of the dimensions of the tensor:
+
+# In[53]:
+some_list = list(range(6))
+some_list[:]
+some_list[1:4]
+some_list[1:]
+some_list[:4]
+some_list[:-1]
+some_list[1:4:2]
+
+In addition to using ranges, PyTorch features a powerful form of indexing, called advanced indexing, which we will look into in the next chapter.
+
+# In[54]:
+points[1:]
+points[1:, :]
+points[1:, 0]
+points[None]
+
+The dimensions (or axes) of our Tensors usually index something like pixel locations or color channels. This means that when we want to index into our Tensor, we need to remember the ordering of the dimensions and write our indexing accordingly. As data is transformed through multiple tensors, keeping track of which dimension contains what data can be error-prone.
+
+3.3  Named Tensors
+
+The dimensions (or axes) of our Tensors usually index something like pixel locations or color channels. This means that when we want to index into our Tensor, we need to remember the ordering of the dimensions and write our indexing accordingly. As data is transformed through multiple tensors, keeping track of which dimension contains what data can be error-prone.
+
+We also often want our code to generalize - for example from grayscale images represented as 2D Tensors with height and width dimensions to color images adding a third channel dimension (as in RGB) or from a single image to a batch of images. In “Ready, set, almost run” we had introduced an additional batch dimension in batch_t, here we pretend to have a batch of two.
+
+# In[2]:
+img_t = torch.randn(3, 5, 5) # shape [channels, rows, columns]
+weights = torch.tensor([0.2126, 0.7152, 0.0722])
+
+So sometimes the RGB channels are in dimension 0 and sometimes in dimension 1. But we can generalize by counting from the end: They are always in dimension -3, the third from the end. The lazy, unweighted mean would thus be written as follows:
+
+# In[3]:
+batch_t = torch.randn(2, 3, 5, 5) # shape [batch, channels, rows, columns]
+
+But now we have the weight, too. PyTorch will allow us to multiply things that are of same shape, but also of shapes where one operand is of size one in a given dimensions. It also appends leading dimensions of size one automatically. This is a feature called broadcasting. We see that the our batch_t of shape (2, 3, 5, 5) gets multiplied with the unsqueezed_weights of shape (3, 1, 1) to a tensor of shape (2, 3, 5, 5), from which we can then sum the third dimension from the end (the 3 channels).
+
+# In[4]:
+img_gray_naive = img_t.mean(-3)
+batch_gray_naive = batch_t.mean(-3)
+img_gray_naive.shape, batch_gray_naive.shape
+
+# Out[4]:
+(torch.Size([5, 5]), torch.Size([2, 5, 5]))
+
+Because this gets messy quickly (and for efficiency), there even is a PyTorch function einsum (adapted from NumPy) that specifies an indexing mini-language [28] giving index names to dimensions for sums of such products. As often in Python, broadcasting — a form of summarizing unnamed things — is done using three dots '…', but don’t worry too much about einsum, we will not use it in the following.
+
+unsqueezed_weights = weights.unsqueeze(-1).unsqueeze_(-1)
+img_weights = (img_t * unsqueezed_weights)
+batch_weights = (batch_t * unsqueezed_weights)
+img_gray_weighted = img_weights.sum(-3)
+batch_gray_weighted = batch_weights.sum(-3)
+batch_weights.shape, batch_t.shape, unsqueezed_weights.shape
+
+# Out[5]:
+(torch.Size([2, 3, 5, 5]), torch.Size([2, 3, 5, 5]), torch.Size([3, 1, 1]))
+
+As we see, there is quite some bookkeeping involved. This is error prone, more so when the creation of tensors and their use are far apart in our code. This has caught the eye of practitioners and so it has been suggested [29] to give names to the dimension instead.
+
+# In[6]:
+img_gray_weighted_fancy = torch.einsum('...chw,c->...hw', img_t, weights)
+batch_gray_weighted_fancy = torch.einsum('...chw,c->...hw', batch_t, weights)
+batch_gray_weighted_fancy.shape
+
+# Out[6]:
+torch.Size([2, 5, 5])
+
+As we see, there is quite some bookkeeping involved. This is error prone, more so when the creation of tensors and their use are far apart in our code. This has caught the eye of practitioners and so it has been suggested [29] to give names to the dimension instead.
+
+When we already have a tensor and want to add names (but not change existing ones), we can call the method refine_names on it. Similar to indexing, the ellipsis … allows you to leave out any number of dimensions. With the rename sibling method you can also overwrite or drop (by passing in None) existing names.
+
+# In[7]:
+weights_named = torch.tensor([0.2126, 0.7152, 0.0722], names=['channels'])
+weights_named
+
+# Out[7]:
+tensor([0.2126, 0.7152, 0.0722], names=('channels',))
+
+For operations with two inputs, in addition to the usual dimension checks, i.e. that sizes are either the same or one is 1 and can be broadcast to the other, PyTorch will now check the names for us. So far, it does not automatically align dimensions, so we need to do this explicitly. The method align_as returns a tensor with missing dimensions added and existing ones permuted to the right order.
+
+# In[8]:
+img_named =  img_t.refine_names(..., 'channels', 'rows', 'columns')
+batch_named = batch_t.refine_names(..., 'channels', 'rows', 'columns')
+print("img named:", img_named.shape, img_named.names)
+print("batch named:", batch_named.shape, batch_named.names)
+
+# Out[8]:
+img named: torch.Size([3, 5, 5]) ('channels', 'rows', 'columns')
+batch named: torch.Size([2, 3, 5, 5]) (None, 'channels', 'rows', 'columns')
+
+Functions accepting dimension arguments, like sum, also take named dimensions.
+
+# In[9]:
+weights_aligned = weights_named.align_as(img_named)
+weights_aligned.shape, weights_aligned.names
+
+# Out[9]:
+(torch.Size([3, 1, 1]), ('channels', 'rows', 'columns'))
+
+Functions accepting dimension arguments, like sum, also take named dimensions.
+
+# In[10]:
+gray_named = (img_named * weights_aligned).sum('channels')
+gray_named.shape, gray_named.names
+
+# Out[10]:
+(torch.Size([5, 5]), ('rows', 'columns'))
+
+If we want to use the tensors outside functions operating on named tensors, we need to drop the names by renaming them to None. The following gets us back into the world of unnamed dimensions.
+
+gray_named = (img_named[..., :3] * weights_named).sum('channels')
+
+RuntimeError: Error when attempting to broadcast dims ['channels', 'rows', 'columns'] and dims ['channels']: dim 'columns' and dim 'channels' are at the same position from the right but do not match.
+copy
+Given the experimental nature at the time of writing and that we do not muck around with indexing and alignment, we stick to unnamed in the remainder of the book. Named tensors have the potential of eliminating many sources of alignment errors which - if the PyTorch forum is any indication - can be a source of headaches. It will be interesting to see how widely the will be adopted.
+
+# In[12]:
+gray_plain = gray_named.rename(None)
+gray_plain.shape, gray_plain.names
+
+# Out[12]:
+(torch.Size([5, 5]), (None, None))
+
+[28] Tim Rocktäschel’s blog rockt.github.io/2018/04/30/einsum gives a good overview
+
+[29] Sasha Rush’s Tensor Considered Harmful nlp.seas.harvard.edu/NamedTensor
+
+[28] Tim Rocktäschel’s blog rockt.github.io/2018/04/30/einsum gives a good overview
+
+[29] Sasha Rush’s Tensor Considered Harmful nlp.seas.harvard.edu/NamedTensor
+
+[30] pytorch.org/tutorials/intermediate/named_tensor_tutorial.html and pytorch.org/docs/stable/named_tensor.html
+
+
+
